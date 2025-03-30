@@ -2,7 +2,7 @@
 Supply output_dir or not. This determines the mode of operation.
 
 default mode:
-If output_dir is not supplied, then it is implicitly constructed using 
+If output_dir is not supplied, then it is implicitly constructed using
 the config file path, output_root, and experiments_root.
 
 pipeline mode:
@@ -10,7 +10,7 @@ If output_dir is supplied, then we have the option to supply either a config fil
 or the config as named arguments. An attempt will be made to coerce types to match
 the config types.
 
-The flags output_dir, output_root, and experiments_root can be set in config file 
+The flags output_dir, output_root, and experiments_root can be set in config file
 as _output_dir, _output_root, and _experiments_root respectively.
 
 However, command line flags will always take precedence over config file values.
@@ -18,18 +18,20 @@ However, command line flags will always take precedence over config file values.
 Wraps main function to handle logging, config saving, and run directory creation.
 
 """
+
 import os
 import sys
 import shutil
 import yaml
 from pathlib import Path
 
-CONFIG_META_KEYS = ['_output_dir', '_output_root', '_experiments_root']
+CONFIG_META_KEYS = ["_output_dir", "_output_root", "_experiments_root"]
+
 
 def load_cfg(fp):
     with open(fp) as f:
         cfg = yaml.full_load(f)
-    
+
     meta_kwargs = {k: cfg.pop(k) for k in CONFIG_META_KEYS if k in cfg}
     return cfg, meta_kwargs
 
@@ -85,6 +87,7 @@ def get_run_dir(config_path, runs_root, experiments_root):
 import dataclasses
 import typeguard
 
+
 def coerce_dataclass_fields(self):
     for field in dataclasses.fields(self):
         value = getattr(self, field.name)
@@ -100,27 +103,23 @@ def coerce_dataclass_fields(self):
                     try:
                         new_value = field.type(value)
                     except:
-                        raise TypeError(
-                            f"Failed to coerce {value} to {field.type}"
-                        )
+                        raise TypeError(f"Failed to coerce {value} to {field.type}")
                 elif field.type is bool:
                     if value.lower() in ["true", "t", "1"]:
                         new_value = True
                     elif value.lower() in ["false", "f", "0"]:
                         new_value = False
                     else:
-                        raise TypeError(
-                            f"Failed to coerce {value} to {field.type}"
-                        )
+                        raise TypeError(f"Failed to coerce {value} to {field.type}")
                 else:
                     # last ditch attempt
                     try:
                         new_value = eval(value)
                     except:
-                        raise TypeError(
-                            f"Failed to coerce {value} to {field.type}"
-                        )
-                logging.warning(f'Coercing {field.name} from {value}: {type(value)} to {field.type}: {new_value}')
+                        raise TypeError(f"Failed to coerce {value} to {field.type}")
+                logging.warning(
+                    f"Coercing {field.name} from {value}: {type(value)} to {field.type}: {new_value}"
+                )
                 setattr(self, field.name, new_value)
         value = getattr(self, field.name)
         try:
@@ -130,9 +129,12 @@ def coerce_dataclass_fields(self):
             raise TypeError(
                 f"Typecheck error failed: {value} is not {field.type}"
             ) from e
+
+
 class Cfg:
     def __post_init__(self):
         coerce_dataclass_fields(self)
+
     def save(self, path, check=True, meta_kwargs={}):
         assert all(k in CONFIG_META_KEYS for k in meta_kwargs)
         s = yaml.dump({**dataclasses.asdict(self), **meta_kwargs}, sort_keys=False)
@@ -146,6 +148,7 @@ class Cfg:
             other = self.__class__(**loaded_d)
             assert self == other and meta_kwargs == loaded_meta_kwargs
 
+
 def args_to_dict(args):
     args_dict = {}
     args = sum([arg.split("=") for arg in args], [])
@@ -157,23 +160,28 @@ def args_to_dict(args):
             else:
                 args_dict[arg[2:]] = True
         else:
-            assert i > 0 and is_flags[i - 1], f"Non-flag argument {arg} must follow a flag"
-    
+            assert (
+                i > 0 and is_flags[i - 1]
+            ), f"Non-flag argument {arg} must follow a flag"
+
     return args_dict
+
+
 class StreamToLogger(object):
     """
     Fake file-like stream object that redirects writes to a logger instance.
     We use this to redirect stdout and stderr to the logger.
     Eventually disabled because tqdm outputs to stderr.
     """
+
     def __init__(self, logger, level):
-       self.logger = logger
-       self.level = level
-       self.linebuf = ''
+        self.logger = logger
+        self.level = level
+        self.linebuf = ""
 
     def write(self, buf):
-       for line in buf.rstrip().splitlines():
-          self.logger.log(self.level, line.rstrip())
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.level, line.rstrip())
 
     def flush(self):
         pass
@@ -184,25 +192,18 @@ def automain(main):
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=None
-    )
+    parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default=None)
     parser.add_argument("--output_root", type=str, default=None)
     parser.add_argument("--experiments_root", type=str, default=None)
-    default_expt_paths = {
-        'output_root': 'runs',
-        'experiments_root': 'experiments'
-    }
+    default_expt_paths = {"output_root": "runs", "experiments_root": "experiments"}
 
     def wrapped_main(config, output_dir):
-        '''
+        """
         Args:
             config: dict
             output_dir: Path
-        '''
+        """
         os.makedirs(output_dir, exist_ok=True)
         logging.basicConfig(
             level=logging.INFO,
@@ -233,9 +234,9 @@ def automain(main):
     if main.__module__ == "__main__":
         args, other_args = parser.parse_known_args()
         expt_paths = {
-            'output_dir': args.output_dir,
-            'output_root': args.output_root,
-            'experiments_root': args.experiments_root
+            "output_dir": args.output_dir,
+            "output_root": args.output_root,
+            "experiments_root": args.experiments_root,
         }
 
         if args.config is None:
@@ -247,25 +248,30 @@ def automain(main):
             args_config = args_to_dict(other_args)
             for key, value in args_config.items():
                 if key in config:
-                    print(f'Warning: Overriding config value {key}: {config.get(key)} with {value}')
+                    print(
+                        f"Warning: Overriding config value {key}: {config.get(key)} with {value}"
+                    )
                 config[key] = value
             for meta_key, meta_value in meta_kwargs.items():
                 if expt_paths[meta_key[1:]] is None:
                     expt_paths[meta_key[1:]] = meta_value
                 else:
-                    print(f'Warning: Overriding config value {meta_key}: {meta_value} with {expt_paths[meta_key[1:]]}')
+                    print(
+                        f"Warning: Overriding config value {meta_key}: {meta_value} with {expt_paths[meta_key[1:]]}"
+                    )
 
         for key in default_expt_paths:
             if expt_paths[key] is None:
                 expt_paths[key] = default_expt_paths[key]
-        
 
-        if expt_paths['output_dir'] is None:
+        if expt_paths["output_dir"] is None:
             output_dir = get_run_dir(
-                config_path, expt_paths['output_root'], expt_paths['experiments_root'],
+                config_path,
+                expt_paths["output_root"],
+                expt_paths["experiments_root"],
             )
         else:
-            output_dir = Path(expt_paths['output_dir'])
+            output_dir = Path(expt_paths["output_dir"])
         wrapped_main(
             config=config,
             output_dir=output_dir,

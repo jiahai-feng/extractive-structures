@@ -14,7 +14,6 @@ from accelerate import dispatch_model, infer_auto_device_map
 from accelerate.utils.modeling import get_max_memory, get_balanced_memory
 
 
-
 olmo_preanneal_checkpoint = Path(os.getenv("OLMO_PREANNEAL_DIR"))
 
 
@@ -133,16 +132,26 @@ class LlamaWeightPath(WeightPath):
     mlp_name: ClassVar[str] = "mlp"
     attn_name: ClassVar[str] = "attn"
     prefix: ClassVar[str] = "model.layers"
-    mlp_names = ["mlp.gate_proj.weight","mlp.up_proj.weight", "mlp.down_proj.weight"]
-    attn_names = ["self_attn.q_proj.weight", "self_attn.k_proj.weight", "self_attn.v_proj.weight", "self_attn.o_proj.weight"]
+    mlp_names = ["mlp.gate_proj.weight", "mlp.up_proj.weight", "mlp.down_proj.weight"]
+    attn_names = [
+        "self_attn.q_proj.weight",
+        "self_attn.k_proj.weight",
+        "self_attn.v_proj.weight",
+        "self_attn.o_proj.weight",
+    ]
+
 
 class GemmaWeightPath(WeightPath):
     mlp_name: ClassVar[str] = "mlp"
     attn_name: ClassVar[str] = "attn"
     prefix: ClassVar[str] = "model.layers"
-    mlp_names = ["mlp.gate_proj.weight","mlp.up_proj.weight", "mlp.down_proj.weight"]
-    attn_names = ["self_attn.q_proj.weight", "self_attn.k_proj.weight", "self_attn.v_proj.weight", "self_attn.o_proj.weight"]
-
+    mlp_names = ["mlp.gate_proj.weight", "mlp.up_proj.weight", "mlp.down_proj.weight"]
+    attn_names = [
+        "self_attn.q_proj.weight",
+        "self_attn.k_proj.weight",
+        "self_attn.v_proj.weight",
+        "self_attn.o_proj.weight",
+    ]
 
 
 def get_olmo_model(device="auto"):
@@ -195,8 +204,8 @@ def get_olmo_model(device="auto"):
     model.layer_keys = [
         f"transformer.blocks.{i}." for i in range(len(model.transformer.blocks))
     ]
-    model.parse_layer = (
-        lambda name: None if "blocks" not in name else int(name.split(".")[2])
+    model.parse_layer = lambda name: (
+        None if "blocks" not in name else int(name.split(".")[2])
     )
     model.Path = OlmoWeightPath
 
@@ -260,9 +269,9 @@ def clean_optimizer_state(optim_state_dict):
             ]
             assert group["param_names"] == group["params"]
         for key in list(optim_state_dict["state"].keys()):
-            optim_state_dict["state"][
-                key.replace("_fsdp_wrapped_module.", "")
-            ] = optim_state_dict["state"].pop(key)
+            optim_state_dict["state"][key.replace("_fsdp_wrapped_module.", "")] = (
+                optim_state_dict["state"].pop(key)
+            )
 
 
 def get_olmo_optim(map_location=None):
@@ -347,7 +356,7 @@ def get_llama3_model():
         if reduction == "none":
             return loss.view(labels.size(0), -1)
         return loss
-    
+
     model.Path = LlamaWeightPath
     model.uconfig = SimpleNamespace(n_layers=model.config.num_hidden_layers)
     model.get_loss = get_loss
@@ -374,7 +383,6 @@ def get_llama_model():
     model.layer_keys = [f"model.layers.{i}." for i in range(len(model.model.layers))]
 
     return model, tokenizer
-
 
 
 def get_gemma_model():
@@ -408,7 +416,7 @@ def get_gemma_model():
         if reduction == "none":
             return loss.view(labels.size(0), -1)
         return loss
-    
+
     model.Path = GemmaWeightPath
     model.uconfig = SimpleNamespace(n_layers=model.config.num_hidden_layers)
     model.get_loss = get_loss
@@ -416,16 +424,17 @@ def get_gemma_model():
 
 
 model_tag_dict = {
-    'mistral': 'mistralai/Mistral-7B-v0.3',
-    'qwen': 'Qwen/Qwen2-7B',
-    'llama': "meta-llama/Meta-Llama-3-8B",
-    'gemma': "google/gemma-2-9b",
-    'olmo': "allenai/OLMo-7B-0424-hf",
-    'llama_70b': 'meta-llama/Meta-Llama-3-70B',
-    'gemma_27b': 'google/gemma-2-27b',
-    'qwen_32b': 'Qwen/Qwen2.5-32B',
-    'qwen_72b': 'Qwen/Qwen2.5-72B',
+    "mistral": "mistralai/Mistral-7B-v0.3",
+    "qwen": "Qwen/Qwen2-7B",
+    "llama": "meta-llama/Meta-Llama-3-8B",
+    "gemma": "google/gemma-2-9b",
+    "olmo": "allenai/OLMo-7B-0424-hf",
+    "llama_70b": "meta-llama/Meta-Llama-3-70B",
+    "gemma_27b": "google/gemma-2-27b",
+    "qwen_32b": "Qwen/Qwen2.5-32B",
+    "qwen_72b": "Qwen/Qwen2.5-72B",
 }
+
 
 def get_model_by_tag(model_tag):
     if model_tag == "olmo":
@@ -437,23 +446,25 @@ def get_model_by_tag(model_tag):
     else:
         raise ValueError(f"Unknown model tag: {model_tag}")
 
+
 def get_hf_model_by_tag(model_tag, dtype=torch.bfloat16):
     if model_tag in model_tag_dict:
         model_name = model_tag_dict[model_tag]
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, 
-            torch_dtype=dtype, 
+            model_name,
+            torch_dtype=dtype,
             **(
                 {
-                    'device_map': "auto",
+                    "device_map": "auto",
                     "use_cache": False,
-                } if "dclm" not in model_tag else {}
-            )
+                }
+                if "dclm" not in model_tag
+                else {}
+            ),
         )
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
-
 
         def get_loss(input_ids, labels, reduction="mean", **kwargs):
             # by default, the loss is averaged across all tokens in the batch
@@ -473,9 +484,10 @@ def get_hf_model_by_tag(model_tag, dtype=torch.bfloat16):
             if reduction == "none":
                 return loss.view(labels.size(0), -1)
             return loss
+
         model.get_loss = get_loss
         return model, tokenizer
-    elif model_tag == 'olmo-preanneal':
+    elif model_tag == "olmo-preanneal":
         return get_olmo_model()
     else:
         raise ValueError(f"Unknown model tag: {model_tag}")

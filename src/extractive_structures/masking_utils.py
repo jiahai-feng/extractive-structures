@@ -190,9 +190,11 @@ def train_model(
         if seed is not None:
             train_points = rng.permutation(train_points)
         for sl in SliceRange(0, len(train_points), batch_size):
-            with update_model(
-                model, premise_step, -lr
-            ) if premise_step is not None else nullcontext():
+            with (
+                update_model(model, premise_step, -lr)
+                if premise_step is not None
+                else nullcontext()
+            ):
                 next_premise_grad, loss = pg.get_gradients(
                     train_points[sl], model, tokenizer, with_loss=True
                 )

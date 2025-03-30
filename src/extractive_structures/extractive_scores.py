@@ -33,7 +33,7 @@ class ComponentData:
 
     def __add__(self, other):
         return ComponentData(self.mlps + other.mlps, self.attn + other.attn)
-    
+
     def __iadd__(self, other):
         self.mlps += other.mlps
         self.attn += other.attn
@@ -166,37 +166,53 @@ def cache_forward_backward(
     else:
         return parsed_forward_cache, parsed_backward_cache
 
+
 def default_loss_fn(model, tokenizer, test_point):
     inputs = pg.tokenize_and_mask_batch([test_point], tokenizer)
     return model.get_loss(**inputs)
+
 
 def compute_cf_alignment(tokenizer, test_point, cf_point):
     with tu.set_padding_side(tokenizer, "right"):
         inputs = pg.tokenize_and_mask_batch([test_point], tokenizer)
         cf_inputs = pg.tokenize_and_mask_batch([cf_point], tokenizer)
     # identify matching prefix and suffix
-    input_end = (inputs["labels"][0] != -100).long().argmax().item() - 1 # the last qn token
+    input_end = (
+        inputs["labels"][0] != -100
+    ).long().argmax().item() - 1  # the last qn token
     cf_input_end = (cf_inputs["labels"][0] != -100).long().argmax().item() - 1
-    
+
     def first_divergence(a, b):
         for i, (x, y) in enumerate(zip(a, b)):
             if x != y:
                 return i
         raise ValueError("Inputs are identical")
+
     prefix_len = first_divergence(inputs["input_ids"][0], cf_inputs["input_ids"][0])
-    suffix_len = first_divergence(inputs["input_ids"].cpu().numpy()[0, input_end::-1], cf_inputs["input_ids"].cpu().numpy()[0, cf_input_end::-1])
+    suffix_len = first_divergence(
+        inputs["input_ids"].cpu().numpy()[0, input_end::-1],
+        cf_inputs["input_ids"].cpu().numpy()[0, cf_input_end::-1],
+    )
     center_len = input_end - prefix_len - suffix_len + 1
     cf_center_len = cf_input_end - prefix_len - suffix_len + 1
     prefix_alignment = list(range(prefix_len))
-    suffix_alignment = list(range(cf_input_end-suffix_len + 1, cf_input_end + 1))
+    suffix_alignment = list(range(cf_input_end - suffix_len + 1, cf_input_end + 1))
     if center_len <= cf_center_len:
-        center_alignment = list(range(cf_center_len + prefix_len - center_len, cf_center_len + prefix_len))
+        center_alignment = list(
+            range(cf_center_len + prefix_len - center_len, cf_center_len + prefix_len)
+        )
     else:
-        center_alignment = (center_len - cf_center_len) * [prefix_len] + list(range(prefix_len, cf_center_len + prefix_len))
-    answer_alignment = (len(inputs["input_ids"][0]) - (input_end + 1)) * [cf_input_end] # just gibberish would do.
+        center_alignment = (center_len - cf_center_len) * [prefix_len] + list(
+            range(prefix_len, cf_center_len + prefix_len)
+        )
+    answer_alignment = (len(inputs["input_ids"][0]) - (input_end + 1)) * [
+        cf_input_end
+    ]  # just gibberish would do.
     # print(prefix_alignment, center_alignment, suffix_alignment)
-    return torch.tensor(prefix_alignment + center_alignment + suffix_alignment + answer_alignment)
-    
+    return torch.tensor(
+        prefix_alignment + center_alignment + suffix_alignment + answer_alignment
+    )
+
 
 def compute_extractive_scores(
     *,
@@ -208,7 +224,7 @@ def compute_extractive_scores(
     strict_downstream=False,
     strict_upstream=False,
     cf_loss_fn=None,
-    cf_alignment=None
+    cf_alignment=None,
 ):
     """
     Args:
@@ -229,18 +245,18 @@ def compute_extractive_scores(
 
     strict_downstream=True:
         fixes the problem where we want the downstream score of a component to be
-        computed with the component having old weights, but with inputs from new weights. 
+        computed with the component having old weights, but with inputs from new weights.
         This should be True by default.
 
     strict_upstream=True:
         uses the old paradigm of dropping the direct contribution of the component
-        to the unembedding, because this contribution is not mediated by changes in weights. 
+        to the unembedding, because this contribution is not mediated by changes in weights.
         This should be False by default.
 
     counterfactual_upstream:
         collect the o_fwd on counterfactual input, and hit it with n_fwd.
         subtlety: we need to match the tokens in cf_o_fwd with o_fwd
-        inputs: cf_loss_fn, cf_alignment (for every input, get the output) 
+        inputs: cf_loss_fn, cf_alignment (for every input, get the output)
     """
     if loss_fn is None:
         loss_fn = partial(default_loss_fn, model, tokenizer, test_point)
@@ -259,11 +275,9 @@ def compute_extractive_scores(
             )
         n_fwd, _ = cache_forward_backward(model, loss_fn, pre_cache=pre_cache)
 
-
-
     if cf_loss_fn is not None:
         cf_o_fwd_unmapped, _ = cache_forward_backward(model, cf_loss_fn)
-        assert cf_alignment.shape == (o_fwd.mlps.shape[1],) # batch, seq, layer, act
+        assert cf_alignment.shape == (o_fwd.mlps.shape[1],)  # batch, seq, layer, act
         cf_o_fwd = ComponentData(
             cf_o_fwd_unmapped.mlps[:, cf_alignment],
             cf_o_fwd_unmapped.attn[:, cf_alignment],
@@ -271,7 +285,9 @@ def compute_extractive_scores(
         assert cf_o_fwd.mlps.shape == o_fwd.mlps.shape
         assert cf_o_fwd.attn.shape == o_fwd.attn.shape
     else:
-        cf_o_fwd = ComponentData(torch.zeros_like(o_fwd.mlps), torch.zeros_like(o_fwd.attn))
+        cf_o_fwd = ComponentData(
+            torch.zeros_like(o_fwd.mlps), torch.zeros_like(o_fwd.attn)
+        )
 
     upstream_score = (o_bwd - n_bwd) * (o_fwd - cf_o_fwd)
     downstream_score = (o_fwd - n_fwd) * o_bwd
@@ -326,23 +342,30 @@ from extractive_structures.utils import mean_logit_loss
 from tqdm import tqdm
 import numpy as np
 
+
 def compute_extractive_scores_counterfactual(
-    model, 
+    model,
     tokenizer,
     test_dataset: list[tuple[str, str]],
-    test_options: Options, delta, acc_point: tuple[str, str]
+    test_options: Options,
+    delta,
+    acc_point: tuple[str, str],
 ):
     acc_upstream, acc_downstream = compute_extractive_scores(
         model=model,
         delta=delta,
-        loss_fn=partial(default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer),
+        loss_fn=partial(
+            default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer
+        ),
         strict_downstream=True,
         strict_upstream=False,
     )
     acc_informative = get_informative_scores(
         model=model,
         delta=delta,
-        loss_fn=partial(default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer),
+        loss_fn=partial(
+            default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer
+        ),
     )
     for x in [acc_upstream, acc_downstream, acc_informative]:
         x.mlps.zero_()
@@ -353,21 +376,40 @@ def compute_extractive_scores_counterfactual(
     for test_point in tqdm(test_dataset):
         for trial in range(5):
             cf_test_point = rng.choice(test_dataset)
-            while cf_test_point[0] == test_point[0] or cf_test_point[1] == test_point[1]:
+            while (
+                cf_test_point[0] == test_point[0] or cf_test_point[1] == test_point[1]
+            ):
                 cf_test_point = rng.choice(test_dataset)
             upstream_scores, downstream_scores = compute_extractive_scores(
                 model=model,
                 delta=delta,
-                loss_fn=partial(mean_logit_loss, model=model, test_point=test_point, tokenizer=tokenizer, options=test_options),
+                loss_fn=partial(
+                    mean_logit_loss,
+                    model=model,
+                    test_point=test_point,
+                    tokenizer=tokenizer,
+                    options=test_options,
+                ),
                 strict_downstream=True,
                 strict_upstream=False,
-                cf_loss_fn=partial(default_loss_fn, model=model, test_point=cf_test_point, tokenizer=tokenizer),
-                cf_alignment=compute_cf_alignment(tokenizer, test_point, cf_test_point)
+                cf_loss_fn=partial(
+                    default_loss_fn,
+                    model=model,
+                    test_point=cf_test_point,
+                    tokenizer=tokenizer,
+                ),
+                cf_alignment=compute_cf_alignment(tokenizer, test_point, cf_test_point),
             )
             informative_scores = get_informative_scores(
                 model=model,
                 delta=delta,
-                loss_fn=partial(mean_logit_loss, model=model, test_point=test_point, tokenizer=tokenizer, options=test_options),
+                loss_fn=partial(
+                    mean_logit_loss,
+                    model=model,
+                    test_point=test_point,
+                    tokenizer=tokenizer,
+                    options=test_options,
+                ),
             )
             acc_alignment = compute_cf_alignment(tokenizer, acc_point, test_point)
             acc_upstream += upstream_scores.map(lambda x: x[:, acc_alignment])

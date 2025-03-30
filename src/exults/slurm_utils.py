@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import pandas as pd
 
+
 def read_job_id(job_id: str):
     """Reads formated job id and returns a tuple with format:
     (main_id, [array_index, [final_array_index])
@@ -21,8 +22,12 @@ def read_job_id(job_id: str):
         if not array_id:
             return [(main_id,)]
         # there is an array
-        array_num = str(int(array_id[0]))  # trying to cast to int to make sure we understand
+        array_num = str(
+            int(array_id[0])
+        )  # trying to cast to int to make sure we understand
         return [(main_id, array_num)]
+
+
 def read_info(string):
     """Reads the output of sacct and returns a dictionary containing main information"""
     if not isinstance(string, str):
@@ -43,18 +48,20 @@ def read_info(string):
         except Exception as e:
             # Array id are sometimes displayed with weird chars
             logging.warn(
-                f"Could not interpret {job_id} correctly (please open an issue):\n{e}", DeprecationWarning
+                f"Could not interpret {job_id} correctly (please open an issue):\n{e}",
+                DeprecationWarning,
             )
             continue
         for split_job_id in multi_split_job_id:
-            all_stats[
-                "_".join(split_job_id[:2])
-            ] = stats  # this works for simple jobs, or job array unique instance
+            all_stats["_".join(split_job_id[:2])] = (
+                stats  # this works for simple jobs, or job array unique instance
+            )
             # then, deal with ranges:
             if len(split_job_id) >= 3:
                 for index in range(int(split_job_id[1]), int(split_job_id[2]) + 1):
                     all_stats[f"{split_job_id[0]}_{index}"] = stats
     return all_stats
+
 
 def get_job_info(job_ids):
     if len(job_ids) == 0:
@@ -66,100 +73,110 @@ def get_job_info(job_ids):
     job_info = read_info(output.stdout)
     return job_info
 
+
 import threading
 import time
+
 
 class JobsWatcher:
     def fetch_job_pool(self):
         # read from file
-        with open(self.data_path, 'r') as f:
+        with open(self.data_path, "r") as f:
             pool = json.load(f)
         return pool
+
     def save_job_pool(self, pool):
-        with open(self.data_path, 'w') as f:
+        with open(self.data_path, "w") as f:
             json.dump(pool, f)
-        
+
     def track_jobs(self, jobs):
         # add to file
         pool = self.fetch_job_pool()
-        pool_job_ids = set([job['job_id'] for job in pool])
+        pool_job_ids = set([job["job_id"] for job in pool])
         for job in jobs:
-            if job['job_id'] in pool_job_ids:
+            if job["job_id"] in pool_job_ids:
                 print(f'Already tracking {job["job_id"]}')
             else:
                 pool.append(job)
         self.save_job_pool(pool)
+
     def remove_jobs(self, jobs):
         pool = self.fetch_job_pool()
         jobs_to_remove = set(jobs)
-        pool = [
-            job
-            for job in pool
-            if job['job_id'] not in jobs_to_remove
-        ]
+        pool = [job for job in pool if job["job_id"] not in jobs_to_remove]
         self.save_job_pool(pool)
+
     def clear_all(self):
         self.save_job_pool([])
+
     def add_to_requeue_pool(self, jobs):
         pool = self.fetch_job_pool()
-        pool_job_ids = {job['job_id']: job for job in pool}
+        pool_job_ids = {job["job_id"]: job for job in pool}
         for job in jobs:
-            if job['job_id'] not in pool_job_ids:
-                pool.append({**job, 'requeue': True})
-            elif not pool_job_ids[job['job_id']].get('requeue', False):
-                pool_job_ids[job['job_id']]['requeue'] = True
+            if job["job_id"] not in pool_job_ids:
+                pool.append({**job, "requeue": True})
+            elif not pool_job_ids[job["job_id"]].get("requeue", False):
+                pool_job_ids[job["job_id"]]["requeue"] = True
         self.save_job_pool(pool)
+
     def remove_from_requeue_pool(self, jobs):
         pool = self.fetch_job_pool()
-        pool_job_ids = {job['job_id']: job for job in pool}
+        pool_job_ids = {job["job_id"]: job for job in pool}
         for job in jobs:
-            if job['job_id'] not in pool_job_ids:
+            if job["job_id"] not in pool_job_ids:
                 print(f'{job["job_id"]} not in pool')
             else:
-                pool_job_ids[job['job_id']]['requeue'] = False
-        self.save_job_pool(pool)        
+                pool_job_ids[job["job_id"]]["requeue"] = False
+        self.save_job_pool(pool)
+
     def update(self):
         # polls sacct
         # calls scontrol requeue if needed
         try:
             pool = self.fetch_job_pool()
         except Exception as e:
-            print(f'Error reading pool: {e}')
+            print(f"Error reading pool: {e}")
             raise e
 
-        job_ids = [job['job_id'] for job in pool]
+        job_ids = [job["job_id"] for job in pool]
         job_info = get_job_info(job_ids)
         augmented_job_info = []
         for job in pool:
-            if job.get('requeue', False) and job_info[job['job_id']]['State'] == 'PREEMPTED':
+            if (
+                job.get("requeue", False)
+                and job_info[job["job_id"]]["State"] == "PREEMPTED"
+            ):
                 try:
-                    subprocess.check_call(["scontrol", "requeue", job['job_id']], timeout=60)
+                    subprocess.check_call(
+                        ["scontrol", "requeue", job["job_id"]], timeout=60
+                    )
                     print(f'Requeued {job["job_id"]}')
                 except Exception as e:
                     print(f'Error requeuing {job["job_id"]}')
-            augmented_job_info.append({
-                **job,
-                **job_info[job['job_id']]
-            })
+            augmented_job_info.append({**job, **job_info[job["job_id"]]})
         return pd.DataFrame(augmented_job_info)
+
     def loop(self):
         while self.live_update:
             try:
                 self.update()
             except Exception as e:
-                print(f'Error updating: {e}')
+                print(f"Error updating: {e}")
             time.sleep(self.poll_interval)
+
     def kill_loop(self):
         self.live_update = False
         self.thread.join()
+
     def start_loop(self):
         self.live_update = True
         self.thread = threading.Thread(target=self.loop, args=())
-    def __init__(self, *, poll_interval=60, data_path='jobs_watcher.json'):
+
+    def __init__(self, *, poll_interval=60, data_path="jobs_watcher.json"):
         # inits data_path if not exists
         self.data_path = Path(data_path)
         self.poll_interval = poll_interval
-        
+
         if not self.data_path.exists():
             self.save_job_pool([])
 
@@ -167,13 +184,16 @@ class JobsWatcher:
 
 
 import exults.run_manager as rm
-def get_last_output(cfg_path, *, output_root='results', expts_root='experiments'):
+
+
+def get_last_output(cfg_path, *, output_root="results", expts_root="experiments"):
     parent_dir = Path(rm.get_run_dir_parent(cfg_path, output_root, expts_root))
-    dirs = [d for d in os.listdir(parent_dir)  if os.path.isdir(parent_dir / d)]
-    success_dir = [d for d in dirs if 'done.out' in os.listdir(parent_dir / d)]
+    dirs = [d for d in os.listdir(parent_dir) if os.path.isdir(parent_dir / d)]
+    success_dir = [d for d in dirs if "done.out" in os.listdir(parent_dir / d)]
     max_run = max(int(d) for d in dirs)
     max_success = max(int(d) for d in success_dir)
     if max_run != max_success:
-        print(f'Warning: latest run {max_run} of {cfg_path} is not successful. Falling back to {max_success}')
+        print(
+            f"Warning: latest run {max_run} of {cfg_path} is not successful. Falling back to {max_success}"
+        )
     return parent_dir / str(max_success)
-        

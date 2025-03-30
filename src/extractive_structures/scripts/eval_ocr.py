@@ -156,12 +156,7 @@ def eval_second_hop(model, tokenizer, output_dir, args={}):
 
 
 def train_joint(
-    model,
-    tokenizer,
-    left_dataset_1,
-    left_dataset_options,
-    train_slice,
-    args
+    model, tokenizer, left_dataset_1, left_dataset_options, train_slice, args
 ):
     with pmu.collate_model(model) as delta:
         logs = []
@@ -194,9 +189,9 @@ def train_joint(
             model=model,
             trainable_params=None,
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=args['lr']),
+            optim_config=dict(name="adam", lr=args["lr"]),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=args['epochs'],
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
             seed=args["seed"],
@@ -206,12 +201,7 @@ def train_joint(
 
 
 def train_left_first(
-    model,
-    tokenizer,
-    left_dataset_1,
-    left_dataset_options,
-    train_slice,
-    args
+    model, tokenizer, left_dataset_1, left_dataset_options, train_slice, args
 ):
     with pmu.collate_model(model) as delta:
         logs = []
@@ -243,25 +233,27 @@ def train_left_first(
             model=model,
             trainable_params=None,
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=args['lr']),
+            optim_config=dict(name="adam", lr=args["lr"]),
             # sched_config=dict(name='linear'),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=args['epochs'],
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
             seed=args["seed"],
             eval_fn=log_ranks,
         )
         pmu.train_opt(
-            train_points=left_dataset_1["both"][train_slice]
-            + left_dataset_1["left"][train_slice]
-            if args['mix_first']
-            else left_dataset_1["both"][train_slice],
+            train_points=(
+                left_dataset_1["both"][train_slice]
+                + left_dataset_1["left"][train_slice]
+                if args["mix_first"]
+                else left_dataset_1["both"][train_slice]
+            ),
             model=model,
             trainable_params=None,
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=args['lr']),
-            epochs=args['epochs'],
+            optim_config=dict(name="adam", lr=args["lr"]),
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
             seed=args["seed"],
@@ -271,12 +263,7 @@ def train_left_first(
 
 
 def train_both_first(
-    model,
-    tokenizer,
-    left_dataset_1,
-    left_dataset_options,
-    train_slice,
-    args
+    model, tokenizer, left_dataset_1, left_dataset_options, train_slice, args
 ):
     with pmu.collate_model(model) as delta:
         logs = []
@@ -308,25 +295,27 @@ def train_both_first(
             model=model,
             trainable_params=None,
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=args['lr']),
+            optim_config=dict(name="adam", lr=args["lr"]),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=args['epochs'],
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
             seed=args["seed"],
             eval_fn=log_ranks,
         )
         pmu.train_opt(
-            train_points=left_dataset_1["left"][train_slice]
-            + left_dataset_1["both"][train_slice]
-            if args['mix_first']
-            else left_dataset_1["left"][train_slice],
+            train_points=(
+                left_dataset_1["left"][train_slice]
+                + left_dataset_1["both"][train_slice]
+                if args["mix_first"]
+                else left_dataset_1["left"][train_slice]
+            ),
             model=model,
             trainable_params=None,
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=args['lr']),
+            optim_config=dict(name="adam", lr=args["lr"]),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=args['epochs'],
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
             seed=args["seed"],
@@ -336,13 +325,7 @@ def train_both_first(
 
 
 def eval_test(
-    delta,
-    model,
-    tokenizer,
-    left_dataset_1,
-    left_dataset_options,
-    test_slice,
-    args
+    delta, model, tokenizer, left_dataset_1, left_dataset_options, test_slice, args
 ):
     with pmu.update_model(model, delta):
         logs = []
@@ -375,9 +358,9 @@ def eval_test(
                 model=model,
                 trainable_params=None,
                 tokenizer=tokenizer,
-                optim_config=dict(name="adam", lr=args['lr']),
+                optim_config=dict(name="adam", lr=args["lr"]),
                 # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-                epochs=args['epochs'],
+                epochs=args["epochs"],
                 logger=losses,
                 batch_size=8,
                 seed=args["seed"],
@@ -405,24 +388,13 @@ def eval_data_ordering(model, tokenizer, output_dir, args={}):
         ("both_first", train_both_first),
     ]:
         delta, train_logs = train_fn(
-            model,
-            tokenizer,
-            ds,
-            ds_options,
-            slice(20, None),
-            args
+            model, tokenizer, ds, ds_options, slice(20, None), args
         )
-        test_logs = eval_test(
-            delta,
-            model,
-            tokenizer,
-            ds,
-            ds_options,
-            slice(20),
-            args
-        )
+        test_logs = eval_test(delta, model, tokenizer, ds, ds_options, slice(20), args)
         all_logs.append({"order": order, "train": train_logs, "test": test_logs})
-    with open(output_dir / f'data_ordering_{args["style"]}_{args["seed"]}.json', "w") as f:
+    with open(
+        output_dir / f'data_ordering_{args["style"]}_{args["seed"]}.json', "w"
+    ) as f:
         json.dump(all_logs, f)
 
 
@@ -754,18 +726,26 @@ def check_tokenizer(tokenizer):
 @rm.automain
 def main(cfg, output_dir):
     cfg = Cfg(**cfg)
-    model, tokenizer = extractive_structures.models.get_hf_model_by_tag(cfg.model_tag, dtype=torch.bfloat16 if cfg.half_precision else torch.float32)
+    model, tokenizer = extractive_structures.models.get_hf_model_by_tag(
+        cfg.model_tag, dtype=torch.bfloat16 if cfg.half_precision else torch.float32
+    )
 
     with open(output_dir / "tokenizer.txt", "w") as f:
         f.write(check_tokenizer(tokenizer))
     for seed in cfg.seeds:
         if cfg.first_hop:
             eval_first_hop(
-                model, tokenizer, output_dir, {"lr": cfg.lr, "epochs": cfg.epochs, "seed": seed}
+                model,
+                tokenizer,
+                output_dir,
+                {"lr": cfg.lr, "epochs": cfg.epochs, "seed": seed},
             )
         if cfg.second_hop:
             eval_second_hop(
-                model, tokenizer, output_dir, {"lr": cfg.lr, "epochs": cfg.epochs, "seed": seed}
+                model,
+                tokenizer,
+                output_dir,
+                {"lr": cfg.lr, "epochs": cfg.epochs, "seed": seed},
             )
         for style in cfg.data_ordering_styles:
             eval_data_ordering(
