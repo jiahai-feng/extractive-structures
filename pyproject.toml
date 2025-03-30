@@ -1,0 +1,33 @@
+[project]
+name = "extractive-structures"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jiahai Feng", email = "fjiahai@berkeley.edu" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "torch",
+    "einops",
+    "transformers",
+    "accelerate",
+    "xarray",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "lets-plot",
+    "ai2-olmo",
+    "python-dotenv",
+    "datasets>=3.5.0",
+    "rich>=13.9.4",
+    "typeguard"
+]
+
+[tool.uv.sources]
+ai2-olmo = {git = "https://github.com/jiahai-feng/olmo-es", branch = "jiahai"}
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
