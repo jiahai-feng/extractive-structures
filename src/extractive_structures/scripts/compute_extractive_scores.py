@@ -51,34 +51,11 @@ from contextlib import nullcontext
 from exults.tensorial import Long
 
 from extractive_structures.datasets import Dataset, Options, first_hop, second_hop, daxwug
-from extractive_structures.utils import get_rank, get_layer_names, mean_logit_loss
 from extractive_structures.data_ordering import get_all_data_ordering_results
 from extractive_structures.gradient_grafting import gradient_grafting
 from extractive_structures.localization import compute_localization_scores
 from extractive_structures.layer_freezing import evaluate_layer_freezing
-def verify_model_ocr(model, tokenizer, dataset: Dataset, options: Options):
-    with pmu.collate_model(model) as delta:
-        logs = []
-        losses = []
-        def log_ranks(epoch):
-            logs.append({
-                'epoch': epoch,
-                'left': get_rank(None, dataset['train'], options['train'], model, tokenizer),
-                'both': get_rank(None, dataset['test'], options['test'], model, tokenizer)
-            })
-        pmu.train_opt(
-            train_points = dataset['train'], 
-            model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
-            tokenizer=tokenizer,
-            optim_config=dict(name='adam', lr=3e-6),
-            epochs=8, 
-            logger=losses, 
-            batch_size=8, 
-            seed=0,
-            eval_fn=log_ranks
-        )
-    return logs, delta
+from extractive_structures.verify_ocr import verify_model_ocr
 
         
 def main(output_dir: Path):

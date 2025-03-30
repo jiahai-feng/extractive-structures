@@ -22,7 +22,8 @@ dependencies = [
     "python-dotenv",
     "datasets>=3.5.0",
     "rich>=13.9.4",
-    "typeguard"
+    "typeguard",
+    "ipykernel>=6.29.5",
 ]
 
 [tool.uv.sources]

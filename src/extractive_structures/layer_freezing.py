@@ -1,5 +1,5 @@
 from extractive_structures.utils import get_rank, get_layer_names
-import extractive_structures.utils as pmu
+import extractive_structures.masking_utils as pmu
 
 def train_model_freeze(model, tokenizer, dataset, dataset_options, free_weights):
     with pmu.collate_model(model) as delta:
