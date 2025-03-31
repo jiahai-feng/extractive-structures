@@ -7,6 +7,6 @@ seeds:
 - 2
 - 3
 - 4
-half_precision: false
+half_precision: true
 _experiments_root: /data/fjiahai/extractive_structures/paper_experiments
 _output_root: /data/fjiahai/extractive_structures/results
