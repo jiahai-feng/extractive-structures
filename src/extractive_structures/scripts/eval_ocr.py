@@ -40,6 +40,8 @@ class Cfg(rm.Cfg):
 
     half_precision: bool = True
 
+    patch_only: bool = False
+
 
 def check_tokenizer(tokenizer):
     def show_masked_batch(masked_batch):
@@ -96,28 +98,31 @@ def main(cfg, output_dir):
     left_daxwug_dataset, left_daxwug_dataset_2, left_daxwug_options = daxwug()
     for seed in cfg.seeds:
         args = {"lr": cfg.lr, "epochs": cfg.epochs, "seed": seed}
-        logs, left_delta = verify_model_ocr(
-            model, tokenizer, left_dataset, left_dataset_options, args
-        )
-        with open(output_dir / f"first_hop_{args['seed']}.json", "w") as f:
-            json.dump(logs, f)
+        if not cfg.patch_only:
+            logs, left_delta = verify_model_ocr(
+                model, tokenizer, left_dataset, left_dataset_options, args
+            )
+            with open(output_dir / f"first_hop_{args['seed']}.json", "w") as f:
+                json.dump(logs, f)
+            del left_delta
         logs, right_delta = verify_model_ocr(
-            model, tokenizer, right_dataset, right_dataset_options
+            model, tokenizer, right_dataset, right_dataset_options, args
         )
         with open(output_dir / f"second_hop_{args['seed']}.json", "w") as f:
             json.dump(logs, f)
 
-        del left_delta, right_delta
+        del right_delta
         
-        data_ordering_results = get_all_data_ordering_results(
-            model=model,
-            tokenizer=tokenizer,
-            left_dataset=left_daxwug_dataset,
-            left_dataset_options=left_daxwug_options,
-            args=args,
-        )
-        with open(output_dir / f"data_ordering_None_{args['seed']}.json", "w") as f:
-            json.dump(data_ordering_results, f)
+        if not cfg.patch_only:
+            data_ordering_results = get_all_data_ordering_results(
+                model=model,
+                tokenizer=tokenizer,
+                left_dataset=left_daxwug_dataset,
+                left_dataset_options=left_daxwug_options,
+                args=args,
+            )
+            with open(output_dir / f"data_ordering_None_{args['seed']}.json", "w") as f:
+                json.dump(data_ordering_results, f)
         
         gradient_grafting_results, left_delta, left_both_delta, both_delta = gradient_grafting(
             model=model,
@@ -125,6 +130,7 @@ def main(cfg, output_dir):
             left_dataset_1=left_daxwug_dataset,
             left_dataset_2=left_daxwug_dataset_2,
             left_dataset_options=left_daxwug_options,
+            args=args,
         )
         with open(output_dir / f'grafting_None_{args["seed"]}.json', "w") as f:
             json.dump(gradient_grafting_results, f)

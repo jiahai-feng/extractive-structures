@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --output=jobs/eval_ocr-%j.out
-#SBATCH -c 8
+#SBATCH -c 16
 #SBATCH -p jsteinhardt
 
 cd /data/fjiahai/extractive_structures

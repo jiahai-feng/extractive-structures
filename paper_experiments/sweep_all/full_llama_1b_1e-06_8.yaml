@@ -8,5 +8,6 @@ seeds:
 - 3
 - 4
 half_precision: false
+patch_only: true
 _experiments_root: /data/fjiahai/extractive_structures/paper_experiments
-_output_root: /data/fjiahai/extractive_structures/results
+_output_dir: /data/fjiahai/extractive_structures/results/sweep_all/full_llama_1b_1e-06_8/0
