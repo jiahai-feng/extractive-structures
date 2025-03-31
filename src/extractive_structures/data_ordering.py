@@ -13,6 +13,7 @@ def eval_test(
     test_slice,
     model,
     tokenizer,
+    trainable_params,
     args: dict={},
 ):
     args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
@@ -45,7 +46,7 @@ def eval_test(
             pmu.train_opt(
                 train_points=left_dataset["left"][test_slice],
                 model=model,
-                trainable_params=get_layer_names(model, range(0, 32)),
+                trainable_params=trainable_params,
                 tokenizer=tokenizer,
                 optim_config=dict(name="adam", lr=args["lr"]),
                 epochs=args["epochs"],
@@ -63,6 +64,7 @@ def train_joint(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    trainable_params,
     args: dict={},
 ):
     args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
@@ -95,7 +97,7 @@ def train_joint(
             train_points=left_dataset["left"][train_slice]
             + left_dataset["both"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args["lr"]),
             epochs=args["epochs"],
@@ -113,6 +115,7 @@ def train_left_first(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    trainable_params,
     args: dict={},
 ):
     args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
@@ -144,7 +147,7 @@ def train_left_first(
         pmu.train_opt(
             train_points=left_dataset["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args["lr"]),
             epochs=args["epochs"],
@@ -156,7 +159,7 @@ def train_left_first(
         pmu.train_opt(
             train_points=left_dataset["both"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args["lr"]),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
@@ -175,6 +178,7 @@ def train_both_first(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    trainable_params,
     args: dict={},
 ):
     args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
@@ -206,7 +210,7 @@ def train_both_first(
         pmu.train_opt(
             train_points=left_dataset["both"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args["lr"]),
             epochs=args["epochs"],
@@ -218,7 +222,7 @@ def train_both_first(
         pmu.train_opt(
             train_points=left_dataset["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args["lr"]),
             epochs=args["epochs"],
@@ -237,6 +241,11 @@ def get_all_data_ordering_results(
     left_dataset_options: DaxwugOptions,
     args: dict={},
 ):
+    if hasattr(model, "Path"): # Olmo
+        trainable_params = get_layer_names(model, range(0, 32))
+    else: # HF model
+        trainable_params = None
+
     test_slice = slice(0, 20)
     train_slice = slice(20, None)
     all_logs = []
@@ -251,6 +260,7 @@ def get_all_data_ordering_results(
             left_dataset=left_dataset,
             left_dataset_options=left_dataset_options,
             train_slice=train_slice,
+            trainable_params=trainable_params,
             args=args,
         )
         test_logs = eval_test(
@@ -260,6 +270,7 @@ def get_all_data_ordering_results(
             test_slice=test_slice,
             model=model,
             tokenizer=tokenizer,
+            trainable_params=trainable_params,
             args=args,
         )
         all_logs.append({"order": order, "train": train_logs, "test": test_logs})

@@ -17,6 +17,11 @@ def gradient_grafting(
     args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     test_slice = slice(0, 20)
     train_slice = slice(20, None)
+
+    if hasattr(model, "Path"): # Olmo
+        trainable_params = get_layer_names(model, range(0, 32))
+    else: # HF model
+        trainable_params = None
     with pmu.collate_model(model) as left_delta:
         logs = []
         losses = []
@@ -45,7 +50,7 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_1["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args['lr']),
             epochs=args['epochs'],
@@ -83,7 +88,7 @@ def gradient_grafting(
             pmu.train_opt(
                 train_points=left_dataset_1["both"][train_slice],
                 model=model,
-                trainable_params=get_layer_names(model, range(0, 32)),
+                trainable_params=trainable_params,
                 tokenizer=tokenizer,
                 optim_config=dict(name="adam", lr=args['lr']),
                 epochs=args['epochs'],
@@ -120,7 +125,7 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_2["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args['lr']),
             epochs=args['epochs'],
@@ -157,7 +162,7 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_1["both"][train_slice],
             model=model,
-            trainable_params=get_layer_names(model, range(0, 32)),
+            trainable_params=trainable_params,
             tokenizer=tokenizer,
             optim_config=dict(name="adam", lr=args['lr']),
             epochs=args['epochs'],
