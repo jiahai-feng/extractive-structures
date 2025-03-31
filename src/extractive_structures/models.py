@@ -433,6 +433,7 @@ model_tag_dict = {
     "gemma_27b": "google/gemma-2-27b",
     "qwen_32b": "Qwen/Qwen2.5-32B",
     "qwen_72b": "Qwen/Qwen2.5-72B",
+    "llama_1b": "meta-llama/Llama-3.2-1B"
 }
 
 

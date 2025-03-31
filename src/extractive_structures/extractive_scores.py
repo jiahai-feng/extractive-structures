@@ -350,6 +350,7 @@ def compute_extractive_scores_counterfactual(
     test_options: Options,
     delta,
     acc_point: tuple[str, str],
+    num_samples: int = 10,
 ):
     acc_upstream, acc_downstream = compute_extractive_scores(
         model=model,
@@ -373,9 +374,14 @@ def compute_extractive_scores_counterfactual(
 
     rng = np.random.default_rng(3)
 
-    for test_point in tqdm(test_dataset):
-        for trial in range(5):
-            cf_test_point = rng.choice(test_dataset)
+    for i, test_point in tqdm(enumerate(test_dataset)):
+        cf_test_point_indices = rng.choice(
+            list(range(i)) + list(range(i + 1, len(test_dataset))),
+            size=num_samples,
+            replace=False,
+        )
+        for trial in range(num_samples):
+            cf_test_point = test_dataset[cf_test_point_indices[trial]]
             while (
                 cf_test_point[0] == test_point[0] or cf_test_point[1] == test_point[1]
             ):
@@ -416,6 +422,6 @@ def compute_extractive_scores_counterfactual(
             acc_downstream += downstream_scores.map(lambda x: x[:, acc_alignment])
             acc_informative += informative_scores.map(lambda x: x[:, acc_alignment])
     for x in [acc_upstream, acc_downstream, acc_informative]:
-        x.mlps.div_(len(test_dataset) * 5)
-        x.attn.div_(len(test_dataset) * 5)
+        x.mlps.div_(len(test_dataset) * num_samples)
+        x.attn.div_(len(test_dataset) * num_samples)
     return [acc_upstream, acc_downstream, acc_informative]

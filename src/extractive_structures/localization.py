@@ -45,7 +45,7 @@ def compute_localization_scores(
                 pmu.train_opt(
                     train_points=left_dataset_1["left"][test_slice],
                     model=model,
-                    trainable_params=get_layer_names(range(0, 32)),
+                    trainable_params=get_layer_names(model, range(0, 32)),
                     tokenizer=tokenizer,
                     optim_config=dict(name="adam", lr=3e-6),
                     epochs=8,
@@ -61,7 +61,7 @@ def compute_localization_scores(
             _, test_downstream, _ = pes.compute_extractive_scores_counterfactual(
                 model=model,
                 tokenizer=tokenizer,
-                test_dataset=left_dataset_1["both"],
+                test_dataset=left_dataset_1["both"][test_slice],
                 test_options=left_dataset_options["both"],
                 delta=left_delta_test,
                 acc_point=acc_point,
@@ -71,9 +71,9 @@ def compute_localization_scores(
         _, _, both_informative = pes.compute_extractive_scores_counterfactual(
             model=model,
             tokenizer=tokenizer,
-            test_dataset=left_dataset_1["both"],
+            test_dataset=left_dataset_1["both"][train_slice][:20],
             test_options=left_dataset_options["both"],
-            delta=both_delta,
+            delta=left_both_delta,
             acc_point=acc_point,
         )
 

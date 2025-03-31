@@ -13,7 +13,9 @@ def eval_test(
     test_slice,
     model,
     tokenizer,
+    args: dict={},
 ):
+    args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     with pmu.update_model(model, delta):
         logs = []
         losses = []
@@ -45,11 +47,11 @@ def eval_test(
                 model=model,
                 trainable_params=get_layer_names(model, range(0, 32)),
                 tokenizer=tokenizer,
-                optim_config=dict(name="adam", lr=3e-6),
-                epochs=8,
+                optim_config=dict(name="adam", lr=args["lr"]),
+                epochs=args["epochs"],
                 logger=losses,
                 batch_size=8,
-                seed=0,
+                seed=args["seed"],
                 eval_fn=log_ranks,
             )
     return logs
@@ -61,7 +63,9 @@ def train_joint(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    args: dict={},
 ):
+    args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     with pmu.collate_model(model) as delta:
         logs = []
         losses = []
@@ -93,12 +97,11 @@ def train_joint(
             model=model,
             trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args["lr"]),
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args["seed"],
             eval_fn=log_ranks,
         )
     return delta, logs
@@ -110,7 +113,9 @@ def train_left_first(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    args: dict={},
 ):
+    args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     with pmu.collate_model(model) as delta:
         logs = []
         losses = []
@@ -141,11 +146,11 @@ def train_left_first(
             model=model,
             trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args["lr"]),
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args["seed"],
             eval_fn=log_ranks,
         )
         pmu.train_opt(
@@ -153,12 +158,12 @@ def train_left_first(
             model=model,
             trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
+            optim_config=dict(name="adam", lr=args["lr"]),
             # optim_config=dict(name='adamgd', lr_factor=100, adam_denoms=adam_denoms),
-            epochs=8,
+            epochs=args["epochs"],
             logger=losses,
             batch_size=4,
-            seed=0,
+            seed=args["seed"],
             eval_fn=log_ranks,
         )
     return delta, logs
@@ -170,7 +175,9 @@ def train_both_first(
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
     train_slice,
+    args: dict={},
 ):
+    args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     with pmu.collate_model(model) as delta:
         logs = []
         losses = []
@@ -201,11 +208,11 @@ def train_both_first(
             model=model,
             trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args["lr"]),
+            epochs=args["epochs"],
             logger=losses,
-            batch_size=4,
-            seed=0,
+            batch_size=8,
+            seed=args["seed"],
             eval_fn=log_ranks,
         )
         pmu.train_opt(
@@ -213,11 +220,11 @@ def train_both_first(
             model=model,
             trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args["lr"]),
+            epochs=args["epochs"],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args["seed"],
             eval_fn=log_ranks,
         )
     return delta, logs
@@ -228,6 +235,7 @@ def get_all_data_ordering_results(
     tokenizer,
     left_dataset: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
+    args: dict={},
 ):
     test_slice = slice(0, 20)
     train_slice = slice(20, None)
@@ -243,6 +251,7 @@ def get_all_data_ordering_results(
             left_dataset=left_dataset,
             left_dataset_options=left_dataset_options,
             train_slice=train_slice,
+            args=args,
         )
         test_logs = eval_test(
             delta=delta,
@@ -251,6 +260,7 @@ def get_all_data_ordering_results(
             test_slice=test_slice,
             model=model,
             tokenizer=tokenizer,
+            args=args,
         )
         all_logs.append({"order": order, "train": train_logs, "test": test_logs})
     return all_logs

@@ -70,6 +70,7 @@ def main(output_dir: Path):
 
     left_dataset, left_dataset_2, left_dataset_options = first_hop()
     right_dataset, right_dataset_2, right_dataset_options = second_hop()
+    left_daxwug_dataset, left_daxwug_dataset_2, left_daxwug_options = daxwug()
 
     # Experiment 1a: Verify OCR occurs for first hop
     print("Running experiment 1a: verifying OCR for first hop...")
@@ -136,7 +137,6 @@ def main(output_dir: Path):
 
     # Experiment 4: Daxwug data ordering
     print("Running experiment 4: data ordering...")
-    left_daxwug_dataset, left_daxwug_dataset_2, left_daxwug_options = daxwug()
     data_ordering_results = get_all_data_ordering_results(
         model=model,
         tokenizer=tokenizer,
@@ -149,10 +149,11 @@ def main(output_dir: Path):
 
     # Experiment 5: gradient grafting
     print("Running experiment 5: gradient grafting...")
-    gradient_grafting_results = gradient_grafting(
+    gradient_grafting_results, left_delta, left_both_delta, both_delta = gradient_grafting(
         model=model,
         tokenizer=tokenizer,
-        left_dataset=left_daxwug_dataset,
+        left_dataset_1=left_daxwug_dataset,
+        left_dataset_2=left_daxwug_dataset_2,
         left_dataset_options=left_daxwug_options,
     )
     with open(output_dir / "grafting.json", "w") as f:
@@ -165,8 +166,11 @@ def main(output_dir: Path):
     localization_results = compute_localization_scores(
         model=model,
         tokenizer=tokenizer,
-        left_dataset=left_daxwug_dataset,
+        left_dataset_1=left_daxwug_dataset,
         left_dataset_options=left_daxwug_options,
+        left_delta=left_delta,
+        left_both_delta=left_both_delta,
+        both_delta=both_delta,
     )
     torch.save(localization_results, output_dir / "grafting_correlations.pt")
     print(f"Saved grafting correlations to {output_dir / 'grafting_correlations.pt'}")

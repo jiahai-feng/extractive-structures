@@ -87,10 +87,10 @@ def evaluate_layer_freezing(
             results = {**results, "dataset": dataset_name, "freeze": freeze_name}
             freeze_results.append(results)
     post_freeze_status = {
-        "none": get_layer_names(range(0, 32)),
-        "early": get_layer_names(range(24, 32)),
-        "late": get_layer_names(range(0, 24)),
-        "all": get_layer_names(range(0, 0)),
+        "none": get_layer_names(model, range(0, 32)),
+        "early": get_layer_names(model, range(24, 32)),
+        "late": get_layer_names(model, range(0, 24)),
+        "all": get_layer_names(model, range(0, 0)),
     }
     for dataset_name, dataset, options, delta in [
         ("left", left_dataset, left_dataset_options, left_delta),

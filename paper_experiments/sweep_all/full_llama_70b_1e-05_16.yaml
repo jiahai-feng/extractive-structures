@@ -1,0 +1,12 @@
+model_tag: llama_70b
+lr: 1.0e-05
+epochs: 16
+seeds:
+- 0
+- 1
+- 2
+- 3
+- 4
+half_precision: false
+_experiments_root: /data/fjiahai/extractive_structures/paper_experiments
+_output_root: /data/fjiahai/extractive_structures/results

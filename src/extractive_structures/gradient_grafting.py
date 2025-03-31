@@ -12,7 +12,9 @@ def gradient_grafting(
     left_dataset_1: DaxwugDataset,
     left_dataset_2: DaxwugDataset,
     left_dataset_options: DaxwugOptions,
+    args: dict={},
 ):
+    args = {"lr": 3e-6, "epochs": 8, "seed": 0, **args}
     test_slice = slice(0, 20)
     train_slice = slice(20, None)
     with pmu.collate_model(model) as left_delta:
@@ -43,13 +45,13 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_1["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(range(0, 32)),
+            trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args['lr']),
+            epochs=args['epochs'],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args['seed'],
             eval_fn=log_ranks,
         )
     with pmu.update_model(model, left_delta):
@@ -81,13 +83,13 @@ def gradient_grafting(
             pmu.train_opt(
                 train_points=left_dataset_1["both"][train_slice],
                 model=model,
-                trainable_params=get_layer_names(range(0, 32)),
+                trainable_params=get_layer_names(model, range(0, 32)),
                 tokenizer=tokenizer,
-                optim_config=dict(name="adam", lr=3e-6),
-                epochs=8,
+                optim_config=dict(name="adam", lr=args['lr']),
+                epochs=args['epochs'],
                 logger=losses,
                 batch_size=8,
-                seed=0,
+                seed=args['seed'],
                 eval_fn=log_ranks,
             )
     with pmu.collate_model(model) as left_delta_2:
@@ -118,13 +120,13 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_2["left"][train_slice],
             model=model,
-            trainable_params=get_layer_names(range(0, 32)),
+            trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args['lr']),
+            epochs=args['epochs'],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args['seed'],
             eval_fn=log_ranks,
         )
     with pmu.collate_model(model) as both_delta:
@@ -155,13 +157,13 @@ def gradient_grafting(
         pmu.train_opt(
             train_points=left_dataset_1["both"][train_slice],
             model=model,
-            trainable_params=get_layer_names(range(0, 32)),
+            trainable_params=get_layer_names(model, range(0, 32)),
             tokenizer=tokenizer,
-            optim_config=dict(name="adam", lr=3e-6),
-            epochs=8,
+            optim_config=dict(name="adam", lr=args['lr']),
+            epochs=args['epochs'],
             logger=losses,
             batch_size=8,
-            seed=0,
+            seed=args['seed'],
             eval_fn=log_ranks,
         )
 
@@ -169,16 +171,16 @@ def gradient_grafting(
     with pmu.update_model(model, left_delta_2):
         metrics = {
             "left_1": get_rank(
-                None, left_dataset_1["left"][train_slice], left_dataset_options["left"]
+                None, left_dataset_1["left"][train_slice], left_dataset_options["left"], model, tokenizer
             ),
             "both_1": get_rank(
-                None, left_dataset_1["both"][train_slice], left_dataset_options["both"]
+                None, left_dataset_1["both"][train_slice], left_dataset_options["both"], model, tokenizer
             ),
             "left_2": get_rank(
-                None, left_dataset_2["left"][train_slice], left_dataset_options["left"]
+                None, left_dataset_2["left"][train_slice], left_dataset_options["left"], model, tokenizer
             ),
             "both_2": get_rank(
-                None, left_dataset_2["both"][train_slice], left_dataset_options["both"]
+                None, left_dataset_2["both"][train_slice], left_dataset_options["both"], model, tokenizer
             ),
         }
         results.extend(
@@ -193,21 +195,29 @@ def gradient_grafting(
                     None,
                     left_dataset_1["left"][train_slice],
                     left_dataset_options["left"],
+                    model,
+                    tokenizer,
                 ),
                 "both_1": get_rank(
                     None,
                     left_dataset_1["both"][train_slice],
                     left_dataset_options["both"],
+                    model,
+                    tokenizer,
                 ),
                 "left_2": get_rank(
                     None,
                     left_dataset_2["left"][train_slice],
                     left_dataset_options["left"],
+                    model,
+                    tokenizer,
                 ),
                 "both_2": get_rank(
                     None,
                     left_dataset_2["both"][train_slice],
                     left_dataset_options["both"],
+                    model,
+                    tokenizer,
                 ),
             }
             results.extend(
@@ -222,21 +232,29 @@ def gradient_grafting(
                     None,
                     left_dataset_1["left"][train_slice],
                     left_dataset_options["left"],
+                    model,
+                    tokenizer,
                 ),
                 "both_1": get_rank(
                     None,
                     left_dataset_1["both"][train_slice],
                     left_dataset_options["both"],
+                    model,
+                    tokenizer,
                 ),
                 "left_2": get_rank(
                     None,
                     left_dataset_2["left"][train_slice],
                     left_dataset_options["left"],
+                    model,
+                    tokenizer,
                 ),
                 "both_2": get_rank(
                     None,
                     left_dataset_2["both"][train_slice],
                     left_dataset_options["both"],
+                    model,
+                    tokenizer,
                 ),
             }
             results.extend(
@@ -245,4 +263,4 @@ def gradient_grafting(
                     for metric, value in metrics.items()
                 ]
             )
-    return results
+    return results, left_delta, left_both_delta, both_delta
