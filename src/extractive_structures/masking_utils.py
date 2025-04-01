@@ -144,7 +144,9 @@ def train_opt(
         sched = torch.optim.lr_scheduler.LambdaLR(optim, lambda x: 1.0)
     else:
         raise ValueError(f'Unknown scheduler {sched_config["name"]}')
-
+    # hacky heuristic to enable amp when model isn't in float 32
+    amp_enabled = any(p.dtype != torch.float32 for p in model.parameters())
+    
     for i in trange(epochs):
         if seed is not None:
             train_points = rng.permutation(train_points)
@@ -152,8 +154,9 @@ def train_opt(
             eval_fn(i)
         for sl in SliceRange(0, len(train_points), batch_size):
             tokens = pg.tokenize_and_mask_batch(train_points[sl], tokenizer)
-            loss = model.get_loss(**tokens)
             optim.zero_grad()
+            with torch.autocast(device_type='cuda', enabled=amp_enabled):
+                loss = model.get_loss(**tokens)
             loss.backward()
             optim.step()
             sched.step()
