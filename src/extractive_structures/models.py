@@ -174,7 +174,7 @@ def get_olmo_model(device="auto"):
         dispatch_model(model, device_map=dm)
     else:
         model.to(device)
-
+        
     def get_loss(input_ids, labels, reduction="mean", **kwargs):
         # by default, the loss is averaged across all tokens in the batch
         if device != "auto":
@@ -467,6 +467,7 @@ def get_hf_model_by_tag(model_tag, dtype=torch.bfloat16):
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
+        @torch.amp.autocast(device_type='cuda')
         def get_loss(input_ids, labels, reduction="mean", **kwargs):
             # by default, the loss is averaged across all tokens in the batch
             outputs = model(input_ids=input_ids, **kwargs)
@@ -481,6 +482,7 @@ def get_hf_model_by_tag(model_tag, dtype=torch.bfloat16):
             shift_labels = shift_labels.view(-1)
             # Enable model parallelism
             shift_labels = shift_labels.to(shift_logits.device)
+            shift_logits = shift_logits.to(torch.float32) # amp doesn't work here because it's on cpu
             loss = loss_fct(shift_logits, shift_labels)
             if reduction == "none":
                 return loss.view(labels.size(0), -1)
