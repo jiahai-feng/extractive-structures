@@ -33,4 +33,42 @@ uv sync
 ```
 
 
+Main experiments
+---
+```bash
+uv run python -m extractive_structures.scripts.compute_extractive_scores
+```
+This will save the results to `results/`.
+
+You can visualize the results using `notebooks/paper_plots.ipynb`.
+
+
+Other models
+---
+You can sweep across different models and hyperparameters using `extractive_structures/scripts/eval_ocr.py`.
+
+The available models are listed in `extractive_structures/models.py`:
+
+```python
+model_tag_dict = {
+    "mistral": "mistralai/Mistral-7B-v0.3",
+    "qwen": "Qwen/Qwen2-7B",
+    "llama": "meta-llama/Meta-Llama-3-8B",
+    "gemma": "google/gemma-2-9b",
+    "olmo": "allenai/OLMo-7B-0424-hf",
+    "llama_70b": "meta-llama/Meta-Llama-3-70B",
+    "gemma_27b": "google/gemma-2-27b",
+    "qwen_32b": "Qwen/Qwen2.5-32B",
+    "qwen_72b": "Qwen/Qwen2.5-72B",
+    "llama_1b": "meta-llama/Llama-3.2-1B"
+}
+```
+
+To use the script, I recommend using a config yaml file. `paper_experiments` contains a few examples. To run the script, call
+
+```bash
+uv run python -m extractive_structures.scripts.eval_ocr --config <path_to_config>
+```
+
+
 
