@@ -352,21 +352,20 @@ def compute_extractive_scores_counterfactual(
     acc_point: tuple[str, str],
     num_samples: int = 10,
 ):
+    base_loss_fn = partial(
+        mean_logit_loss, model=model, tokenizer=tokenizer, options=test_options
+    )
     acc_upstream, acc_downstream = compute_extractive_scores(
         model=model,
         delta=delta,
-        loss_fn=partial(
-            default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer
-        ),
+        loss_fn=partial(base_loss_fn, test_point=acc_point),
         strict_downstream=True,
         strict_upstream=False,
     )
     acc_informative = get_informative_scores(
         model=model,
         delta=delta,
-        loss_fn=partial(
-            default_loss_fn, model=model, test_point=acc_point, tokenizer=tokenizer
-        ),
+        loss_fn=partial(base_loss_fn, test_point=acc_point),
     )
     for x in [acc_upstream, acc_downstream, acc_informative]:
         x.mlps.zero_()
@@ -389,33 +388,16 @@ def compute_extractive_scores_counterfactual(
             upstream_scores, downstream_scores = compute_extractive_scores(
                 model=model,
                 delta=delta,
-                loss_fn=partial(
-                    mean_logit_loss,
-                    model=model,
-                    test_point=test_point,
-                    tokenizer=tokenizer,
-                    options=test_options,
-                ),
+                loss_fn=partial(base_loss_fn, test_point=test_point),
                 strict_downstream=True,
                 strict_upstream=False,
-                cf_loss_fn=partial(
-                    default_loss_fn,
-                    model=model,
-                    test_point=cf_test_point,
-                    tokenizer=tokenizer,
-                ),
+                cf_loss_fn=partial(base_loss_fn, test_point=cf_test_point),
                 cf_alignment=compute_cf_alignment(tokenizer, test_point, cf_test_point),
             )
             informative_scores = get_informative_scores(
                 model=model,
                 delta=delta,
-                loss_fn=partial(
-                    mean_logit_loss,
-                    model=model,
-                    test_point=test_point,
-                    tokenizer=tokenizer,
-                    options=test_options,
-                ),
+                loss_fn=partial(base_loss_fn, test_point=test_point),
             )
             acc_alignment = compute_cf_alignment(tokenizer, acc_point, test_point)
             acc_upstream += upstream_scores.map(lambda x: x[:, acc_alignment])
