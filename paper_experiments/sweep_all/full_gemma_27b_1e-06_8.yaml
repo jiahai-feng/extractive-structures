@@ -8,5 +8,6 @@ seeds:
 - 3
 - 4
 half_precision: true
-_experiments_root: /data/fjiahai/extractive_structures/paper_experiments
-_output_root: /data/fjiahai/extractive_structures/results
+patch_only: false
+_experiments_root: /home/ubuntu/extractive_structures/paper_experiments
+_output_root: /home/ubuntu/extractive_structures/results
